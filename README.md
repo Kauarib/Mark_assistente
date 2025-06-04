@@ -1,4 +1,4 @@
-# Projeto de Controlo de Gastos com Automação de E-mails e Chatbot WhatsApp 📊📧🤖
+# Projeto de Controle de Gastos com Automação de E-mails e Chatbot WhatsApp 📊📧🤖
 
 ## 🚀 Visão Geral
 
