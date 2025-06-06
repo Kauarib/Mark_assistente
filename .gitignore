@@ -200,3 +200,5 @@ dist/
 # Tokens e segredos (evite subir esse tipo de arquivo)
 .env.secret
 secrets.json
+automacao_emails/.env
+automacao_emails/.env

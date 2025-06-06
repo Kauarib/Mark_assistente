@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # 1. Serviço da Base de Dados MySQL
+  db:
+    image: mysql:8.0
+    container_name: gastos_db
+    restart: unless-stopped
+    # Este serviço lê as variáveis do .env na raiz do projeto
+    env_file: ./.env 
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - gastos-network
+
+  # 2. Serviço da API de Controlo de Gastos (Node.js)
+  api-gastos:
+    container_name: api_gastos_service
+    build:
+      context: ./api_controle_gastos_nodejs 
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./.env # Carrega as variáveis partilhadas (DB, etc.) da raiz
+      - ./api_controle_gastos_nodejs/.env # Carrega variáveis específicas deste serviço
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+    networks:
+      - gastos-network
+
+  # 3. Serviço do Backend do Chatbot WhatsApp (Node.js)
+  chatbot-whatsapp:
+    container_name: chatbot_whatsapp_service
+    build:
+      context: ./chatbot_whatsapp_nodejs
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./.env # Carrega as variáveis partilhadas (DB, URLs de API) da raiz
+      - ./chatbot_whatsapp_nodejs/.env # Carrega variáveis específicas (tokens do WhatsApp)
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api-gastos
+    networks:
+      - gastos-network
+
+  # 4. Serviço da Automação de E-mails (Python)
+  automacao-emails:
+    container_name: automacao_emails_service
+    build:
+      context: ./automacao_emails_python
+      dockerfile: Dockerfile
+    restart: unless-stopped 
+    env_file:
+      - ./.env # Carrega as variáveis partilhadas (DB, URLs de API) da raiz
+      - ./automacao_emails_python/.env # Carrega variáveis específicas (credenciais IMAP, se ainda usadas)
+    depends_on:
+      - api-gastos
+    networks:
+      - gastos-network
+
+networks:
+  gastos-network:
+    driver: bridge
+
+volumes:
+  db_data:

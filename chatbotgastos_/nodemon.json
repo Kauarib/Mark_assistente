@@ -1,0 +1,6 @@
+{
+    "watch":["serverjs", "routes/"],
+    "ext": "js, js",
+    "ignore": ["node_modules"],
+    "start": ["node server.js"]
+}
