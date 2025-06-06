@@ -201,4 +201,4 @@ dist/
 .env.secret
 secrets.json
 automacao_emails/.env
-automacao_emails/.env
+
