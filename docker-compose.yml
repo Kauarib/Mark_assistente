@@ -19,12 +19,12 @@ services:
   api-gastos:
     container_name: api_gastos_service
     build:
-      context: ./api_controle_gastos_nodejs 
+      context: ./gastos_
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
       - ./.env # Carrega as variáveis partilhadas (DB, etc.) da raiz
-      - ./api_controle_gastos_nodejs/.env # Carrega variáveis específicas deste serviço
+      - ./gastos_/.env # Carrega variáveis específicas deste serviço
     ports:
       - "5000:5000"
     depends_on:
@@ -36,12 +36,12 @@ services:
   chatbot-whatsapp:
     container_name: chatbot_whatsapp_service
     build:
-      context: ./chatbot_whatsapp_nodejs
+      context: ./chatbotgastos_
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
       - ./.env # Carrega as variáveis partilhadas (DB, URLs de API) da raiz
-      - ./chatbot_whatsapp_nodejs/.env # Carrega variáveis específicas (tokens do WhatsApp)
+      - ./chatbotgastos_/.env # Carrega variáveis específicas (tokens do WhatsApp)
     ports:
       - "3000:3000"
     depends_on:
@@ -53,12 +53,12 @@ services:
   automacao-emails:
     container_name: automacao_emails_service
     build:
-      context: ./automacao_emails_python
+      context: ./automacao_emails
       dockerfile: Dockerfile
     restart: unless-stopped 
     env_file:
       - ./.env # Carrega as variáveis partilhadas (DB, URLs de API) da raiz
-      - ./automacao_emails_python/.env # Carrega variáveis específicas (credenciais IMAP, se ainda usadas)
+      - ./automacao_emails/.env # Carrega variáveis específicas (credenciais IMAP, se ainda usadas)
     depends_on:
       - api-gastos
     networks:

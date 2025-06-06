@@ -1,0 +1,64 @@
+# Bytecode do Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ambiente virtual
+.env/
+.venv/
+venv/
+ENV/
+env/
+
+# Configuração de dependências (Pipenv, Poetry)
+Pipfile.lock
+poetry.lock
+
+# Arquivos de log
+*.log
+
+# Arquivos de banco de dados locais
+*.sqlite3
+*.db
+
+# Configurações do sistema operacional
+.DS_Store
+Thumbs.db
+
+# IDEs e editores
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Arquivos temporários
+*.swp
+*.bak
+*.tmp
+*.old
+
+# Testes
+htmlcov/
+.coverage
+.tox/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+
+# Build
+build/
+dist/
+*.egg-info/
+.eggs/
+*.spec
+
+# Jupyter Notebooks (opcional)
+.ipynb_checkpoints/
+
+# Arquivos ocultos (opcional)
+*.~*
+
+# Tokens e segredos (evite subir esse tipo de arquivo)
+.env.secret
+secrets.json
