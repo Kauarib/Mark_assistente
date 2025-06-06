@@ -202,3 +202,5 @@ dist/
 secrets.json
 automacao_emails/.env
 
+gastos_/.env
+chatbotgatos_/.env
