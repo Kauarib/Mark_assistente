@@ -9,7 +9,7 @@ services:
     # Este serviço lê as variáveis do .env na raiz do projeto
     env_file: ./.env 
     ports:
-      - "3306:3306"
+      - "3306:3307" # Mapeia a porta 3306 do host para a porta 3307 do container
     volumes:
       - db_data:/var/lib/mysql
     networks:
