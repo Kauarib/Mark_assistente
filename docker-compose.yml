@@ -1,4 +1,4 @@
-version: '3.8'
+
 
 services:
   # 1. Serviço da Base de Dados MySQL
@@ -9,11 +9,18 @@ services:
     # Este serviço lê as variáveis do .env na raiz do projeto
     env_file: ./.env 
     ports:
-      - "3306:3307" # Mapeia a porta 3306 do host para a porta 3307 do container
+      - "3307:3306" # Mapeia a porta 3306 do host para a porta 3307 do container
     volumes:
       - db_data:/var/lib/mysql
     networks:
       - gastos-network
+    healthcheck:
+      # Comando que o Docker executará dentro do contentor para verificar a saúde
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${DB_USER}", "-p${DB_PASS}"]
+      interval: 10s   # Intervalo entre as verificações
+      timeout: 5s     # Tempo de espera pela resposta do comando
+      retries: 5      # Número de tentativas falhadas antes de marcar como "unhealthy"
+      start_period: 30s # Período de graça inicial para o contentor iniciar antes de as falhas contarem  
 
   # 2. Serviço da API de Controlo de Gastos (Node.js)
   api-gastos:
@@ -28,9 +35,11 @@ services:
     ports:
       - "5000:5000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy # Garante que o DB está saudável antes de iniciar a API 
     networks:
       - gastos-network
+     
 
   # 3. Serviço do Backend do Chatbot WhatsApp (Node.js)
   chatbot-whatsapp:

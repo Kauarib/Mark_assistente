@@ -34,10 +34,10 @@ app.get('/', (req, res) => {
 //*Sincroniza com o banco e inicia o servidor
 const PORT = process.env.PORT || 5000;
 
-sequelize.sync().then(() => {
-  app.listen(PORT, () => {
-    console.log(`🔥 Servidor rodando na porta ${PORT}`);
+  sequelize.sync().then(() => {
+    app.listen(PORT, () => {
+      console.log(`🔥 Servidor rodando na porta ${PORT}`);
+    });
+  }).catch(err => {
+    console.error('❌ Erro ao conectar com o banco de dados:', err);
   });
-}).catch(err => {
-  console.error('❌ Erro ao conectar com o banco de dados:', err);
-});

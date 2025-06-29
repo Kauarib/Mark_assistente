@@ -234,53 +234,75 @@ const obterCredenciaisIMAPParaAutomacao = async (req, res) => {
     }
 };
 const listarUsuarios = async (req, res) => {
-   try {
+    // --- DIAGNÓSTICO E CORREÇÃO PARA O PROBLEMA "USUÁRIO NÃO ENCONTRADO" ---
+    // O erro onde um usuário existe mas a consulta `findAll` não o encontra,
+    // mesmo com o SQL correto, é quase sempre causado por caracteres invisíveis
+    // ou espaços em branco na coluna `numero_whatsapp` no banco de dados.
+    //
+    // PASSO 1: LIMPE OS DADOS EXISTENTES NO SEU BANCO DE DADOS
+    // Execute o seguinte comando SQL uma vez na sua base de dados MySQL para
+    // remover todos os caracteres que não sejam dígitos (espaços, '+', '(', etc.).
+    // Isto irá padronizar todos os números existentes.
+    //
+    // UPDATE Usuarios SET numero_whatsapp = REGEXP_REPLACE(numero_whatsapp, '[^0-9]+', '');
+    //
+    // PASSO 2: O CÓDIGO ABAIXO FOI ATUALIZADO
+    // O código abaixo também foi atualizado para limpar o parâmetro de busca,
+    // tornando a busca mais robusta para o futuro.
+
+    try {
         const { numero_whatsapp, email } = req.query; // Permite filtrar por WhatsApp ou e-mail
         let queryOptions = {
             where: {}
         };
-        let usuarioEncontrado = false;
+        let filtroAplicado = false;
 
         if (numero_whatsapp) {
-            console.log(`[ListarUsuarios] Buscando usuário com numero_whatsapp: ${numero_whatsapp}`);
-            queryOptions.where.numero_whatsapp = numero_whatsapp; 
-            usuarioEncontrado = true;
-        } else if (email) { l
-            console.log(`[ListarUsuarios] Buscando usuário com email: ${email}`);
-            queryOptions.where.email_login_imap = email; 
-            usuarioEncontrado = true;
+            // Limpa o input da mesma forma que os dados são salvos
+            const numeroLimpo = numero_whatsapp.replace(/\D/g, '');
+            console.log(`[ListarUsuarios] Buscando usuário com numero_whatsapp limpo: ${numeroLimpo}`);
+            queryOptions.where.numero_whatsapp = numeroLimpo; 
+            filtroAplicado = true;
+        } else if (email) { 
+            const emailLimpo = email.trim();
+            console.log(`[ListarUsuarios] Buscando usuário com email: ${emailLimpo}`);
+            queryOptions.where.email_login = emailLimpo; 
+            filtroAplicado = true;
         } else {
-          
-            console.log('[ListarUsuarios] Nenhum filtro específico fornecido. Listando todos os usuários .');
-            
-            // return res.status(400).json({ message: "Filtro (numero_whatsapp ou email) é obrigatório." });
+            console.log('[ListarUsuarios] Nenhum filtro específico fornecido. Listando todos os usuários.');
         }
 
         const usuarios = await Usuarios.findAll(queryOptions);
 
-        if (!usuarios || usuarios.length === 0) {
-            console.log('[ListarUsuarios] Nenhum usuário encontrado para os filtros aplicados.');
-            // Se um filtro específico foi usado e nada encontrado, 404 é apropriado.
-            // Se nenhum filtro foi usado e a tabela está vazia, 404 também.
-            return res.status(404).json({ message: 'Nenhum usuário encontrado' });
+        if (filtroAplicado) {
+            // Usar findOne quando um filtro único é aplicado
+            const usuario = await Usuarios.findOne(queryOptions);
+
+            if (!usuario) {
+                console.log('[ListarUsuarios] Nenhum usuário encontrado para os filtros aplicados.');
+                return res.status(404).json({ message: 'Nenhum usuário encontrado' });
+            }
+
+            console.log(`[ListarUsuarios] Usuário encontrado: ${JSON.stringify(usuario)}`);
+            return res.status(200).json(usuario); // Retorna o objeto diretamente
+
+        } else {
+            // Manter findAll para a listagem geral
+            const usuarios = await Usuarios.findAll(queryOptions);
+            if (usuarios.length === 0) {
+                return res.status(404).json({ message: 'Nenhum usuário encontrado' });
+            }
+            console.log(`[ListarUsuarios] Retornando ${usuarios.length} usuários.`);
+            return res.status(200).json(usuarios);
         }
 
-        // Se um filtro específico foi usado (numero_whatsapp ou email), e estamos aqui, significa que encontramos.
-        // É provável que você queira retornar apenas o primeiro (e único, se houver constraint UNIQUE)
-        if (usuarioEncontrado && usuarios.length > 0) {
-            console.log(`[ListarUsuarios] Usuário encontrado: ${JSON.stringify(usuarios[0])}`);
-            return res.status(200).json(usuarios[0]); // Retorna o primeiro (e único esperado) usuário como objeto
-        }
-        
-        // Se chegou aqui sem filtros específicos, retorna a lista completa (se permitido pela lógica acima)
-        console.log(`[ListarUsuarios] Retornando ${usuarios.length} usuários.`);
-        return res.status(200).json(usuarios);
 
     } catch (error) {
         console.error('Erro ao listar usuários:', error);
         return res.status(500).json({ message: 'Erro interno ao listar usuários.', error: error.message });
     }
 };
+
 
 module.exports = {
     registrarUsuario,
