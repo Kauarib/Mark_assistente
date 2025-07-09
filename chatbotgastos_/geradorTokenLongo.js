@@ -3,7 +3,7 @@ const axios = require('axios');
 
 const appId = process.env.APP_ID;
 const appSecret = process.env.APP_SECRET;
-const shortLivedToken = process.env.SHOT_LIVED_TOKEN;
+const shortLivedToken = process.env.WHATSAPP_ACCESS_TOKEN;
 
 const gerarTokenLongoPrazo = async () => {
   try {
@@ -12,7 +12,7 @@ const gerarTokenLongoPrazo = async () => {
         grant_type: 'fb_exchange_token',
         client_id: appId,
         client_secret: appSecret,
-        fb_exchange_token: shortLivedToken,
+        WH_exchange_token: shortLivedToken,
       },
     });
 

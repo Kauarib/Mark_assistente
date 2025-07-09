@@ -1,7 +1,9 @@
 const axios = require('axios'); 
+const {getTokenAtual} = require('./tokenService'); // Importa o serviço de token
+
 
 const enviarMensagemTexto = async (idNumeroTelefoneBot, paraNumero, textoMensagem) => {
-    const TOKEN_ACESSO_WHATSAPP = process.env.WHATSAPP_ACCESS_TOKEN; 
+    const TOKEN_ACESSO_WHATSAPP = getTokenAtual(); // Obtém o token atual do serviço
     if (!TOKEN_ACESSO_WHATSAPP) {
         console.error("[WHATSAPP API SERVICE] WHATSAPP_ACCESS_TOKEN não configurado.");
         return false;
@@ -41,7 +43,7 @@ const enviarMensagemTexto = async (idNumeroTelefoneBot, paraNumero, textoMensage
 };
 
 const enviarMensagemComBotoesRespostaRapida = async (idNumeroTelefoneBot, paraNumero, textoCorpo, botoes) => {
-    const TOKEN_ACESSO_WHATSAPP = process.env.WHATSAPP_ACCESS_TOKEN;
+    const TOKEN_ACESSO_WHATSAPP = getTokenAtual(); // Obtém o token atual do serviço
     if (!TOKEN_ACESSO_WHATSAPP) {
         console.error("[WHATSAPP API SERVICE] WHATSAPP_ACCESS_TOKEN não configurado.");
         return false;

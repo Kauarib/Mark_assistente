@@ -49,7 +49,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
-      - ./.env # Carrega as variáveis partilhadas (DB, URLs de API) da raiz
+    
       - ./chatbotgastos_/.env # Carrega variáveis específicas (tokens do WhatsApp)
     ports:
       - "3000:3000"
@@ -57,7 +57,10 @@ services:
       - api-gastos
     networks:
       - gastos-network
+    volumes:
+      - ./chatbotgastos_/token.json:/usr/src/app/token.json
 
+     
   # 4. Serviço da Automação de E-mails (Python)
   automacao-emails:
     container_name: automacao_emails_service
