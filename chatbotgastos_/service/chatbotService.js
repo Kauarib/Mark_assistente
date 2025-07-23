@@ -275,7 +275,7 @@ const gerirMensagemRecebida = async (mensagemInfoWhatsapp, metadataWhatsapp) => 
             textoResposta = `Desculpe, ${infoUsuario.nome.split(' ')[0]}, não consegui calcular seus gastos trimestrais. (Erro: ${resultadoGastosTrimestral.erro})`;
         } else if (resultadoGastosTrimestral.soma !== null) {
             const nomeCurto = infoUsuario.nome.split(' ')[0];
-            textoResposta = `${nomeCurto}, seus gastos para os últimos de ${anoAtual} são de R$ ${resultadoGastosTrimestral.soma.toFixed(2).replace('.', ',')}.`;
+            textoResposta = `${nomeCurto}, seus gastos para os últimos 3 meses de ${anoAtual} são de R$ ${resultadoGastosTrimestral.soma.toFixed(2).replace('.', ',')}.`;
         } else {
              textoResposta = `Houve um problema ao buscar seus gastos trimestrais, ${infoUsuario.nome.split(' ')[0]}. Tente novamente.`;
         }
