@@ -105,6 +105,59 @@ async function obterSomaGastosMensais(idUsuario, ano, mes) {
         return { soma: null, erro: "Erro de comunicação com a API de gastos." };
     }
 }
+async function obterSomaGastosTrimestral(idUsuario, ano, trimestre) {
+    if (!API_GASTOS_URL) {
+        console.error("[CHATBOT SERVICE] API_GASTOS_URL não definida no .env.");
+        return { soma: null, erro: "Configuração da API de gastos ausente." };
+    }
+    if (!idUsuario || !ano || !trimestre) {
+        console.error("[CHATBOT SERVICE] Parâmetros ausentes para obterSomaGastosTrimestral (idUsuario, ano, trimestre).");
+        return { soma: null, erro: "Dados insuficientes para buscar gastos." };
+    }
+    try {
+        console.log(`[CHATBOT SERVICE] Buscando gastos trimestrais para usuário ID: ${idUsuario}, Ano: ${ano}, Trimestre: ${trimestre}`);
+        const headers = { 'Content-Type': 'application/json' };
+        if (INTERNAL_API_KEY) {
+            headers['x-api-key'] = INTERNAL_API_KEY;
+        }
+        const response = await axios.get(`${API_GASTOS_URL}`, {
+            params: { id_usuario: idUsuario, ano: ano, trimestre: trimestre },
+            headers: headers,
+            timeout: 10000
+        });
+        if (response.data && Array.isArray(response.data)) {
+            const corridasDoTrimestre = response.data;
+            let somaTotal = 0;
+            if (corridasDoTrimestre.length === 0) {
+                console.log(`[CHATBOT SERVICE] Nenhum gasto encontrado para usuário ${idUsuario} no trimestre ${trimestre} de ${ano}.`);
+                return { soma: 0, erro: null };
+            }
+            corridasDoTrimestre.forEach(corrida => {
+                const valorNumerico = parseFloat(corrida.valor);
+                if (!isNaN(valorNumerico)) {
+                    somaTotal += valorNumerico;
+                } else {
+                    console.warn(`[CHATBOT SERVICE] Valor inválido encontrado na corrida ID ${corrida.id}: ${corrida.valor}`);
+                }
+            });
+            console.log(`[CHATBOT SERVICE] Soma dos gastos trimestrais para o trimestre ${trimestre} de ${ano} do usuário ${idUsuario}: R$ ${somaTotal.toFixed(2)}`);
+            return { soma: somaTotal, erro: null };
+        } else {
+            console.log(`[CHATBOT SERVICE] Resposta inesperada da API de gastos para o trimestre ${trimestre} de ${ano}. Recebido:`, response.data);
+            return { soma: null, erro: "Resposta inesperada da API de gastos." };
+        }
+
+    } catch (error) {
+        console.error(`[CHATBOT SERVICE] Erro ao buscar gastos trimestrais da API (${API_GASTOS_URL}):`, error.message);
+        if (error.response) {
+            console.error("Detalhes do erro API Gastos:", error.response.status, error.response.data);
+            return { soma: null, erro: `Erro da API de gastos: ${error.response.status}` };
+        }
+        return { soma: null, erro: "Erro de comunicação com a API de gastos." };
+    }
+  
+    
+}
 
 const gerirMensagemRecebida = async (mensagemInfoWhatsapp, metadataWhatsapp) => {
     const numeroRemetente = mensagemInfoWhatsapp.from;
@@ -212,6 +265,22 @@ const gerirMensagemRecebida = async (mensagemInfoWhatsapp, metadataWhatsapp) => 
     
     if (textoResposta) {
         await whatsappApiService.enviarMensagemTexto(idNumeroTelefoneBot, numeroRemetente, textoResposta);
+    }
+    else if(comandoRecebido === "CMD_GASTOS_TRIMESTRAL" || comandoRecebido === "Gastos trimestral") {
+        const dataAtual = new Date();
+        const anoAtual = dataAtual.getFullYear();
+        const trimestreAtual = Math.ceil((dataAtual.getMonth() + 1) / 3); 
+
+        const resultadoGastosTrimestral = await obterSomaGastosTrimestral(infoUsuario.id, anoAtual, trimestreAtual);
+
+        if (resultadoGastosTrimestral.erro) {
+            textoResposta = `Desculpe, ${infoUsuario.nome.split(' ')[0]}, não consegui calcular seus gastos trimestrais. (Erro: ${resultadoGastosTrimestral.erro})`;
+        } else if (resultadoGastosTrimestral.soma !== null) {
+            const nomeCurto = infoUsuario.nome.split(' ')[0];
+            textoResposta = `${nomeCurto}, seus gastos para o trimestre ${trimestreAtual} de ${anoAtual} são de R$ ${resultadoGastosTrimestral.soma.toFixed(2).replace('.', ',')}.`;
+        } else {
+             textoResposta = `Houve um problema ao buscar seus gastos trimestrais, ${infoUsuario.nome.split(' ')[0]}. Tente novamente.`;
+        }
     }
 };
 
