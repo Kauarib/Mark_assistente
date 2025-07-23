@@ -263,9 +263,7 @@ const gerirMensagemRecebida = async (mensagemInfoWhatsapp, metadataWhatsapp) => 
         textoResposta = `Ok, ${infoUsuario.nome.split(' ')[0]}, vamos adicionar um novo gasto... (em desenvolvimento)`;
     } 
     
-    if (textoResposta) {
-        await whatsappApiService.enviarMensagemTexto(idNumeroTelefoneBot, numeroRemetente, textoResposta);
-    }
+    
     else if(comandoRecebido === "CMD_GASTOS_TRIMESTRAL" || comandoRecebido === "Gastos trimestral") {
         const dataAtual = new Date();
         const anoAtual = dataAtual.getFullYear();
@@ -277,10 +275,13 @@ const gerirMensagemRecebida = async (mensagemInfoWhatsapp, metadataWhatsapp) => 
             textoResposta = `Desculpe, ${infoUsuario.nome.split(' ')[0]}, não consegui calcular seus gastos trimestrais. (Erro: ${resultadoGastosTrimestral.erro})`;
         } else if (resultadoGastosTrimestral.soma !== null) {
             const nomeCurto = infoUsuario.nome.split(' ')[0];
-            textoResposta = `${nomeCurto}, seus gastos para o trimestre ${trimestreAtual} de ${anoAtual} são de R$ ${resultadoGastosTrimestral.soma.toFixed(2).replace('.', ',')}.`;
+            textoResposta = `${nomeCurto}, seus gastos para os últimos de ${anoAtual} são de R$ ${resultadoGastosTrimestral.soma.toFixed(2).replace('.', ',')}.`;
         } else {
              textoResposta = `Houve um problema ao buscar seus gastos trimestrais, ${infoUsuario.nome.split(' ')[0]}. Tente novamente.`;
         }
+    }
+    if (textoResposta) {
+        await whatsappApiService.enviarMensagemTexto(idNumeroTelefoneBot, numeroRemetente, textoResposta);
     }
 };
 
