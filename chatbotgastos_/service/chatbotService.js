@@ -158,6 +158,57 @@ async function obterSomaGastosTrimestral(idUsuario, ano, trimestre) {
   
     
 }
+async function obterSomaGastosAnual(idUsuario, ano, opcao) {
+     
+    if (!API_GASTOS_URL) {
+        console.error("[CHATBOT SERVICE] API_GASTOS_URL não definida no .env.");
+        return { soma: null, erro: "Configuração da API de gastos ausente." };
+    }
+    if (!idUsuario || !ano || opcao === undefined) {
+        console.error("[CHATBOT SERVICE] Parâmetros ausentes para obterSomaGastosAnual (idUsuario, ano, opcao).");
+        return { soma: null, erro: "Dados insuficientes para buscar gastos." };
+    }
+    try {
+        console.log(`[CHATBOT SERVICE] Buscando gastos anuais para usuário ID: ${idUsuario}, Ano: ${ano}, Opção: ${opcao}`);
+        const headers = { 'Content-Type': 'application/json' };
+        if (INTERNAL_API_KEY) {
+            headers['x-api-key'] = INTERNAL_API_KEY;
+        }
+        const response = await axios.get(`${API_GASTOS_URL}`, {
+            params: { id_usuario: idUsuario, ano: ano, opcao: opcao },
+            headers: headers,
+            timeout: 10000
+        });
+        if (response.data && Array.isArray(response.data)) {
+            const corridasDoAno = response.data;
+            let somaTotal = 0;
+            if (corridasDoAno.length === 0) {
+                console.log(`[CHATBOT SERVICE] Nenhum gasto encontrado para usuário ${idUsuario} no ano ${ano}.`);
+                return { soma: 0, erro: null };
+            }
+            corridasDoAno.forEach(corrida => {
+                const valorNumerico = parseFloat(corrida.valor);
+                if (!isNaN(valorNumerico)) {
+                    somaTotal += valorNumerico;
+                } else {
+                    console.warn(`[CHATBOT SERVICE] Valor inválido encontrado na corrida ID ${corrida.id}: ${corrida.valor}`);
+                }
+            });
+            console.log(`[CHATBOT SERVICE] Soma dos gastos anuais para o ano ${ano} do usuário ${idUsuario}: R$ ${somaTotal.toFixed(2)}`);
+            return { soma: somaTotal, erro: null };
+        } else {
+            console.log(`[CHATBOT SERVICE] Resposta inesperada da API de gastos para o ano ${ano}. Recebido:`, response.data);
+            return { soma: null, erro: "Resposta inesperada da API de gastos."};
+        }
+    } catch (error) {
+        console.error(`[CHATBOT SERVICE] Erro ao buscar gastos anuais da API (${API_GASTOS_URL}):`, error.message);
+        if (error.response) {
+            console.error("Detalhes do erro API Gastos:", error.response.status, error.response.data);
+            return { soma: null, erro: `Erro da API de gastos: ${error.response.status}` };
+        }
+        return { soma: null, erro: "Erro de comunicação com a API de gastos." };
+    }
+}
 
 const gerirMensagemRecebida = async (mensagemInfoWhatsapp, metadataWhatsapp) => {
     const numeroRemetente = mensagemInfoWhatsapp.from;
@@ -229,7 +280,7 @@ const gerirMensagemRecebida = async (mensagemInfoWhatsapp, metadataWhatsapp) => 
         const botoesGastos = [
             { id: "CMD_GASTOS_MENSAIS", title: "Mensal" },
             { id: "CMD_GASTOS_TRIMESTRAL", title: "Trimestral" },
-            { id: "CMD__GASTOS_ANUAL", title: "Anual" },
+            { id: "CMD_GASTOS_ANUAL", title: "Anual" },
            // { id: "CMD_GASTOS_ULTIMOS_30_DIAS", title: "Gastos Últimos 30 Dias" },
            // { id: "CMD_VOLTAR_MENU", title: "Voltar ao Menu Principal" }
 
@@ -278,6 +329,21 @@ const gerirMensagemRecebida = async (mensagemInfoWhatsapp, metadataWhatsapp) => 
             textoResposta = `${nomeCurto}, seus gastos para os últimos 3 meses de ${anoAtual} são de R$ ${resultadoGastosTrimestral.soma.toFixed(2).replace('.', ',')}.`;
         } else {
              textoResposta = `Houve um problema ao buscar seus gastos trimestrais, ${infoUsuario.nome.split(' ')[0]}. Tente novamente.`;
+        }
+    }
+    else if(comandoRecebido === "CMD_GASTOS_ANUAL" || comandoRecebido === "Gastos anual") {
+        const dataAtual = new Date();
+        const anoAtual = dataAtual.getFullYear();
+
+        const resultadoGastosAnual = await obterSomaGastosAnual(infoUsuario.id, anoAtual, 0); // 0 para indicar anual
+
+        if (resultadoGastosAnual.erro) {
+            textoResposta = `Desculpe, ${infoUsuario.nome.split(' ')[0]}, não consegui calcular seus gastos anuais. (Erro: ${resultadoGastosAnual.erro})`;
+        } else if (resultadoGastosAnual.soma !== null) {
+            const nomeCurto = infoUsuario.nome.split(' ')[0];
+            textoResposta = `${nomeCurto}, seus gastos para o ano de ${anoAtual} são de R$ ${resultadoGastosAnual.soma.toFixed(2).replace('.', ',')}.`;
+        } else {
+             textoResposta = `Houve um problema ao buscar seus gastos anuais, ${infoUsuario.nome.split(' ')[0]}. Tente novamente.`;
         }
     }
     if (textoResposta) {
