@@ -209,6 +209,57 @@ async function obterSomaGastosAnual(idUsuario, ano, opcao) {
         return { soma: null, erro: "Erro de comunicação com a API de gastos." };
     }
 }
+async function obterGastosPeriodoPersonalizado(idUsuario, dataInicio, dataFim) {
+    if (!API_GASTOS_URL) {
+        console.error("[CHATBOT SERVICE] API_GASTOS_URL não definida no .env.");
+        return { soma: null, erro: "Configuração da API de gastos ausente." };
+    }
+    if (!idUsuario || !dataInicio || !dataFim) {
+        console.error("[CHATBOT SERVICE] Parâmetros ausentes para obterGastosPeriodoPersonalizado (idUsuario, dataInicio, dataFim).");
+        return { soma: null, erro: "Dados insuficientes para buscar gastos." };
+    }
+    try {
+        console.log(`[CHATBOT SERVICE] Buscando gastos personalizados para usuário ID: ${idUsuario}, Data Início: ${dataInicio}, Data Fim: ${dataFim}`);
+        const headers = { 'Content-Type': 'application/json' };
+        if (INTERNAL_API_KEY) {
+            headers['x-api-key'] = INTERNAL_API_KEY;
+        }
+        const response = await axios.get(`${API_GASTOS_URL}`, {
+            params: { id_usuario: idUsuario, data_inicio: dataInicio, data_fim: dataFim },
+            headers: headers,
+            timeout: 10000
+        });
+        if (response.data && Array.isArray(response.data)) {
+            const corridasDoPeriodo = response.data;
+            let somaTotal = 0;
+            if (corridasDoPeriodo.length === 0) {
+                console.log(`[CHATBOT SERVICE] Nenhum gasto encontrado para usuário ${idUsuario} no período de ${dataInicio} a ${dataFim}.`);
+                return { soma: 0, erro: null };
+            }
+            corridasDoPeriodo.forEach(corrida => {
+                const valorNumerico = parseFloat(corrida.valor);
+                if (!isNaN(valorNumerico)) {
+                    somaTotal += valorNumerico;
+                } else {
+                    console.warn(`[CHATBOT SERVICE] Valor inválido encontrado na corrida ID ${corrida.id}: ${corrida.valor}`);
+                }
+            });
+            console.log(`[CHATBOT SERVICE] Soma dos gastos no período de ${dataInicio} a ${dataFim} do usuário ${idUsuario}: R$ ${somaTotal.toFixed(2)}`);
+            return { soma: somaTotal, erro: null };
+        } else {
+            console.log(`[CHATBOT SERVICE] Resposta inesperada da API de gastos para o período. Recebido:`, response.data);
+            return { soma: null, erro: "Resposta inesperada da API de gastos." };
+        }
+    } catch (error) {
+        console.error(`[CHATBOT SERVICE] Erro ao buscar gastos do período personalizado da API (${API_GASTOS_URL}):`, error.message);
+        if (error.response) {
+            console.error("Detalhes do erro API Gastos:", error.response.status, error.response.data);
+            return { soma: null, erro: `Erro da API de gastos: ${error.response.status}` };
+        }
+        return { soma: null, erro: "Erro de comunicação com a API de gastos." };
+    }
+    
+}
 
 const gerirMensagemRecebida = async (mensagemInfoWhatsapp, metadataWhatsapp) => {
     const numeroRemetente = mensagemInfoWhatsapp.from;
@@ -281,6 +332,8 @@ const gerirMensagemRecebida = async (mensagemInfoWhatsapp, metadataWhatsapp) => 
             { id: "CMD_GASTOS_MENSAIS", title: "Mensal" },
             { id: "CMD_GASTOS_TRIMESTRAL", title: "Trimestral" },
             { id: "CMD_GASTOS_ANUAL", title: "Anual" },
+            { id: "CMD_PERIODO_PERSONALIZADO", title: "Período Personalizado" },
+
            // { id: "CMD_GASTOS_ULTIMOS_30_DIAS", title: "Gastos Últimos 30 Dias" },
            // { id: "CMD_VOLTAR_MENU", title: "Voltar ao Menu Principal" }
 
@@ -345,6 +398,26 @@ const gerirMensagemRecebida = async (mensagemInfoWhatsapp, metadataWhatsapp) => 
         } else {
              textoResposta = `Houve um problema ao buscar seus gastos anuais, ${infoUsuario.nome.split(' ')[0]}. Tente novamente.`;
         }
+    } else if(comandoRecebido === "CMD_PERIODO_PERSONALIZADO" || comandoRecebido === "Gastos período personalizado") {
+        textoResposta = `Para calcular seus gastos em um período personalizado, por favor, envie as datas no formato: "DD/MM/AAAA - DD/MM/AAAA". Exemplo: "01/01/2023 - 31/01/2023"`;
+    } else if( /^\d{2}\/\d{2}\/\d{4} - \d{2}\/\d{2}\/\d{4}$/.test(comandoRecebido) || comandoRecebido.includes(" - ")) {
+        const [dataInicio, dataFim] = comandoRecebido.split(' - ').map(data => data.trim());
+        if (!dataInicio || !dataFim) {
+            textoResposta = `Formato inválido. Por favor, envie as datas no formato: "DD/MM/AAAA - DD/MM/AAAA". Exemplo: "01/01/2023 - 31/01/2023"`;
+        } else {
+            const resultadoGastosPeriodo = await obterGastosPeriodoPersonalizado(infoUsuario.id, dataInicio, dataFim);
+            if (resultadoGastosPeriodo.erro) {
+                textoResposta = `Desculpe, ${infoUsuario.nome.split(' ')[0]}, não consegui calcular seus gastos nesse período. (Erro: ${resultadoGastosPeriodo.erro})`;
+            } else if (resultadoGastosPeriodo.soma !== null) {
+                const nomeCurto = infoUsuario.nome.split(' ')[0];
+                textoResposta = `${nomeCurto}, seus gastos de ${dataInicio} a ${dataFim} são de R$ ${resultadoGastosPeriodo.soma.toFixed(2).replace('.', ',')}.`;
+            } else {
+                 textoResposta = `Houve um problema ao buscar seus gastos nesse período, ${infoUsuario.nome.split(' ')[0]}. Tente novamente.`;
+            }
+        }
+    }
+     else {
+        console.log(`[CHATBOT SERVICE] Comando não reconhecido: ${comandoRecebido}`);
     }
     if (textoResposta) {
         await whatsappApiService.enviarMensagemTexto(idNumeroTelefoneBot, numeroRemetente, textoResposta);
